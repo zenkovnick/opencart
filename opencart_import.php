@@ -1,5 +1,5 @@
 <?php
-    if($_POST['submit']){
+    if($_POST['submit'] && $_FILES['csv'] && $_POST['rates'] && is_numeric($_POST['rates'])){
         $path = "uploads";
         if (move_uploaded_file($_FILES['csv']['tmp_name'], "{$path}/{$_FILES['csv']['name']}")) {
 
@@ -30,8 +30,8 @@
 
                 foreach($csv_result as $csv_row) {
                     echo "<br /><br />";
-                    if ($mysqli->query("INSERT INTO product(product_id, model, quantity, stock_status_id, shipping) VALUES (".
-                        ($max_prod_id+$index+1).", '".$csv_row[3]."', 1, 4, 1)", MYSQLI_USE_RESULT)){
+                    if ($mysqli->query("INSERT INTO product(product_id, model, quantity, stock_status_id, shipping, price) VALUES (".
+                        ($max_prod_id+$index+1).", '".$csv_row[3]."', 1, 4, 1, ".($csv_row[4] *$_POST['rates']).")", MYSQLI_USE_RESULT)){
 
                         $product_id = $mysqli->insert_id;
                         echo "New product id is {$product_id} <br />";
@@ -39,9 +39,13 @@
                             $product_id.", (SELECT DISTINCT category_id FROM category_description cd WHERE cd.name LIKE '".$csv_row[0]."'))";
                         $query2 = "INSERT INTO product_to_category(product_id, category_id) VALUES (".
                             $product_id.", (SELECT DISTINCT category_id FROM category_description cd WHERE cd.name LIKE '".$csv_row[1]."'))";
-                        if ($mysqli->query($query1, MYSQLI_USE_RESULT) && $mysqli->query($query2, MYSQLI_USE_RESULT)) {
-                            echo "Record was inserted <br />";
+                        if (!$mysqli->query($query1, MYSQLI_USE_RESULT)){
+                            echo "Query: {$query1} was not completed";
                         }
+                        if (!$mysqli->query($query2, MYSQLI_USE_RESULT)){
+                            echo "Query: {$query2} was not completed";
+                        }
+
                         $index++;
 
                     }
@@ -61,11 +65,14 @@
 
 <html>
     <head>
-
+        <meta http-equiv="content-type" content="text/html;charset=utf-8">
     </head>
     <body>
         <form action="" method="POST" enctype="multipart/form-data" >
-            <input type="file" name="csv" />
+            <label for="csv">Файл для загрузки в CSV формате</label>
+            <input type="file" name="csv" id="csv" />
+            <label for="rates">Текущий курс доллара по отношению к гривне</label>
+            <input type='text' name='rates' id='rates' />
             <input type="submit" value="Submit" name="submit">
         </form>
     </body>
