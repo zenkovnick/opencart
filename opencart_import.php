@@ -62,8 +62,8 @@
                                 $mysqli->query("INSERT INTO category_description(category_id, language_id, name) VALUES (".
                                     ($max_cat_id+$index_cat+1).", ".$l_id.", '".$csv_row[0]."')", MYSQLI_USE_RESULT);
                             }
-                            $query = 'INSERT INTO category(category_id, parent_id, top, `column`, sort_order, status) VALUES ('.
-                                ($max_cat_id+$index_cat+1).', 0, 1, 1, 0, 1)';
+                            $query = 'INSERT INTO category(category_id, parent_id, image, top, `column`, sort_order, status) VALUES ('.
+                                ($max_cat_id+$index_cat+1).', 0, "", 1, 1, 0, 1)';
                             if (!$mysqli->query($query, MYSQLI_USE_RESULT)){
                                 echo "Query: {$query} was not completed";
                                 printf("Ошибка: %s\n", $mysqli->error);
@@ -84,8 +84,48 @@
                                 $mysqli->query("INSERT INTO category_description(category_id, language_id, name) VALUES (".
                                     ($max_cat_id+$index_cat+1).", ".$l_id.", '".$csv_row[1]."')", MYSQLI_USE_RESULT);
                             }
+                            $query = 'INSERT INTO category(category_id, parent_id, image, top, `column`, sort_order, status) VALUES ('.
+                                ($max_cat_id+$index_cat+1).', (SELECT DISTINCT category_id FROM category_description cd WHERE cd.name LIKE "'.$csv_row[0].'"), "", 1, 1, 0, 1)';
+
+                            if (!$mysqli->query($query, MYSQLI_USE_RESULT)){
+                                echo "Query: {$query} was not completed";
+                                printf("Ошибка: %s\n", $mysqli->error);
+                            }
+
+                            $query = 'INSERT INTO category_to_store(category_id, store_id) VALUES ('.
+                                ($max_cat_id+$index_cat+1).', 0)';
+                            if (!$mysqli->query($query, MYSQLI_USE_RESULT)){
+                                echo "Query: {$query} was not completed";
+                                printf("Ошибка: %s\n", $mysqli->error);
+                            }
+
                             $index_cat++;
                         }
+
+                        $cat = $mysqli->query("SELECT * FROM category_description WHERE name LIKE '".$csv_row[2]."'");
+                        if($cat->num_rows == 0){
+                            foreach($languages_ids as $l_id){
+                                $mysqli->query("INSERT INTO category_description(category_id, language_id, name) VALUES (".
+                                    ($max_cat_id+$index_cat+1).", ".$l_id.", '".$csv_row[2]."')", MYSQLI_USE_RESULT);
+                            }
+                            $query = 'INSERT INTO category(category_id, parent_id, image, top, `column`, sort_order, status) VALUES ('.
+                                ($max_cat_id+$index_cat+1).', (SELECT DISTINCT category_id FROM category_description cd WHERE cd.name LIKE "'.$csv_row[1].'"), "", 1, 1, 0, 1)';
+
+                            if (!$mysqli->query($query, MYSQLI_USE_RESULT)){
+                                echo "Query: {$query} was not completed";
+                                printf("Ошибка: %s\n", $mysqli->error);
+                            }
+
+                            $query = 'INSERT INTO category_to_store(category_id, store_id) VALUES ('.
+                                ($max_cat_id+$index_cat+1).', 0)';
+                            if (!$mysqli->query($query, MYSQLI_USE_RESULT)){
+                                echo "Query: {$query} was not completed";
+                                printf("Ошибка: %s\n", $mysqli->error);
+                            }
+
+                            $index_cat++;
+                        }
+
                     }
                 }
                 foreach($csv_result as $csv_row) {
@@ -105,32 +145,60 @@
                         }
                         $index_cat++;
                     }
+                    $cat = $mysqli->query("SELECT * FROM category_description WHERE name LIKE '".$csv_row[2]."'");
+                    if($cat->num_rows == 0){
+                        foreach($languages_ids as $l_id){
+                            $mysqli->query("INSERT INTO category_description(category_id, language_id, name) VALUES (".
+                                ($max_cat_id+$index_cat+1).", ".$l_id.", '".$csv_row[2]."')", MYSQLI_USE_RESULT);
+                        }
+                        $index_cat++;
+                    }
                 }
 
+                echo "Categories imported: {$index_cat} <br />";
+
+                foreach($csv_result as $csv_row) {
+                    if ($mysqli->query("INSERT INTO product(product_id, model, quantity, stock_status_id, shipping, price, status) VALUES (".
+                        ($max_prod_id+$index+1).", '".$csv_row[3]."', 1, 4, 1, ".($csv_row[4] *$_POST['rates']).", 1)", MYSQLI_USE_RESULT)){
+
+                        $product_id = $mysqli->insert_id;
+                        $query1 = "INSERT INTO product_to_category(product_id, category_id) VALUES (".
+                            $product_id.", (SELECT DISTINCT category_id FROM category_description cd WHERE cd.name LIKE '".$csv_row[0]."'))";
+                        $query2 = "INSERT INTO product_to_category(product_id, category_id) VALUES (".
+                            $product_id.", (SELECT DISTINCT category_id FROM category_description cd WHERE cd.name LIKE '".$csv_row[1]."'))";
+                        $query3 = "INSERT INTO product_to_category(product_id, category_id) VALUES (".
+                            $product_id.", (SELECT DISTINCT category_id FROM category_description cd WHERE cd.name LIKE '".$csv_row[2]."'))";
+                        if (!$mysqli->query($query1, MYSQLI_USE_RESULT)){
+                            echo "Query: {$query1} was not completed";
+                        }
+                        if (!$mysqli->query($query2, MYSQLI_USE_RESULT)){
+                            echo "Query: {$query2} was not completed";
+                        }
+                        if (!$mysqli->query($query3, MYSQLI_USE_RESULT)){
+                            echo "Query: {$query2} was not completed";
+                        }
+
+                        $query = 'INSERT INTO product_to_store(product_id, store_id) VALUES ('.
+                            $product_id.', 0)';
+                        if (!$mysqli->query($query, MYSQLI_USE_RESULT)){
+                            echo "Query: {$query} was not completed";
+                            printf("Ошибка: %s\n", $mysqli->error);
+                        }
+
+                        if(count($languages_ids) > 0){
+                            foreach($languages_ids as $l_id){
+                                $mysqli->query("INSERT INTO product_description(product_id, language_id, name, description) VALUES (".
+                                    $product_id.", ".$l_id.", '".$csv_row[3]."', '".$csv_row[5]."')", MYSQLI_USE_RESULT);
+                            }
+                        }
 
 
-//                foreach($csv_result as $csv_row) {
-//                    echo "<br /><br />";
-//                    if ($mysqli->query("INSERT INTO product(product_id, model, quantity, stock_status_id, shipping, price) VALUES (".
-//                        ($max_prod_id+$index+1).", '".$csv_row[3]."', 1, 4, 1, ".($csv_row[4] *$_POST['rates']).")", MYSQLI_USE_RESULT)){
-//
-//                        $product_id = $mysqli->insert_id;
-//                        echo "New product id is {$product_id} <br />";
-//                        $query1 = "INSERT INTO product_to_category(product_id, category_id) VALUES (".
-//                            $product_id.", (SELECT DISTINCT category_id FROM category_description cd WHERE cd.name LIKE '".$csv_row[0]."'))";
-//                        $query2 = "INSERT INTO product_to_category(product_id, category_id) VALUES (".
-//                            $product_id.", (SELECT DISTINCT category_id FROM category_description cd WHERE cd.name LIKE '".$csv_row[1]."'))";
-//                        if (!$mysqli->query($query1, MYSQLI_USE_RESULT)){
-//                            echo "Query: {$query1} was not completed";
-//                        }
-//                        if (!$mysqli->query($query2, MYSQLI_USE_RESULT)){
-//                            echo "Query: {$query2} was not completed";
-//                        }
-//
-//                        $index++;
-//
-//                    }
-//                }
+
+                        $index++;
+
+                    }
+                }
+                echo "Products imported: {$index} <br />";
 
             }
 
