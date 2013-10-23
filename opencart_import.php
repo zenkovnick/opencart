@@ -1,11 +1,11 @@
 <?php
-
+    require 'config.php';
     setlocale(LC_ALL, 'ru_RU.utf8');
     if($_POST['submit'] && $_FILES['csv'] && $_POST['rates'] && is_numeric($_POST['rates'])){
         $path = "uploads";
         if (move_uploaded_file($_FILES['csv']['tmp_name'], "{$path}/{$_FILES['csv']['name']}")) {
 
-            $mysqli = new mysqli('localhost',"root","root","tradeunit");
+            $mysqli = new mysqli($host,$user,$pass,$db);
             if (!$mysqli->set_charset("utf8")) {
                 printf("Ошибка при загрузке набора символов utf8: %s\n", $mysqli->error);
             }
